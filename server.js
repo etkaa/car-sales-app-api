@@ -205,7 +205,7 @@ app.post("/auth/signup", (req, res) => {
   );
 });
 
-app.get("/auth/logout", (req, res) => {
+app.post("/auth/logout", (req, res) => {
   req.logout((err) => {
     if (!err) {
       res.status(200).send({
@@ -352,22 +352,6 @@ app.post("/listing/newListing", checkAuthentication, (req, res) => {
   });
 });
 
-///Public Route, just to see what kinda filters we can use ex:horsepower>200
-app.get("/listing/getFeaturedListings", (req, res) => {
-  Listing.find({ "engine.horsepower": { $gt: 200 } }, (err, listings) => {
-    if (!err) {
-      res.status(200).send({
-        listings: listings,
-      });
-    } else {
-      res.status(500).send({
-        message: "Failed to get listings!",
-        error: err,
-      });
-    }
-  });
-});
-
 app.get("/listing/getFavoritedListings", checkAuthentication, (req, res) => {
   //find user's favorites
   User.findById(req.user._id, (err, user) => {
@@ -388,6 +372,47 @@ app.get("/listing/getFavoritedListings", checkAuthentication, (req, res) => {
     } else {
       res.status(500).send({
         message: "Failed to get listings!",
+        error: err,
+      });
+    }
+  });
+});
+
+///Public Routes///
+
+app.get("/listing/getFeaturedListings", (req, res) => {
+  //get 10 random listings
+  Listing.aggregate([{ $sample: { size: 10 } }], (err, listings) => {
+    if (!err) {
+      res.status(200).send({
+        listings: listings,
+      });
+    } else {
+      res.status(500).send({
+        message: "Failed to get listings!",
+        error: err,
+      });
+    }
+  });
+});
+
+//get listing by id
+app.post("/listing/getListingById", (req, res) => {
+  if (!req.body.listingID) {
+    res.status(400).send({
+      message: "Listing ID is required!",
+    });
+    return;
+  }
+
+  Listing.findById(req.body.listingID, (err, listing) => {
+    if (!err) {
+      res.status(200).send({
+        listing: listing,
+      });
+    } else {
+      res.status(500).send({
+        message: "Failed to get listing!",
         error: err,
       });
     }
