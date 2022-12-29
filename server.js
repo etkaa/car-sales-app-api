@@ -32,9 +32,10 @@ app.use(
     store: new MemoryStore({
       checkPeriod: 18000000, // prune expired entries every 5h
     }),
+    name: "carsnow.sid",
     cookie: {
       path: "/",
-      maxAge: 1000 * 60 * 60 * 3, //3 Hours
+      maxAge: 1000 * 60 * 60 * 4, //4 Hours
       secure: process.env.NODE_ENV === "production",
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
     },
@@ -418,6 +419,21 @@ app.post("/listing/getListingById", (req, res) => {
     }
   });
 });
+
+// app.post("/listing/insertListing", (req, res) => {
+//   Listing.insertMany(req.body.listings, (err, listings) => {
+//     if (!err) {
+//       res.status(200).send({
+//         message: "Listings inserted successfully",
+//       });
+//     } else {
+//       res.status(500).send({
+//         message: "Failed to insert listings!",
+//         error: err,
+//       });
+//     }
+//   });
+// });
 
 app.listen(port, () => {
   console.log(`Server started running on port ${port}.`);
