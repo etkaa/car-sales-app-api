@@ -9,6 +9,16 @@ const MemoryStore = require("memorystore")(session);
 const passport = require("passport");
 const passportLocalMongoose = require("passport-local-mongoose");
 
+const multer = require("multer");
+const upload = multer({ dest: "uploads/" });
+
+const fs = require("fs");
+const util = require("util");
+//unlink the file after upload
+const unlinkFile = util.promisify(fs.unlink);
+
+const { uploadFile, getFileStream } = require("./s3");
+
 const cors = require("cors");
 const app = express();
 
@@ -434,6 +444,49 @@ app.post("/listing/getListingById", (req, res) => {
 //     }
 //   });
 // });
+
+// app.post("/image/upload", upload.single("image"), async (req, res) => {
+//   const file = req.file;
+//   console.log(file);
+//   if (!file) {
+//     res.status(400).send({
+//       message: "Image is required!",
+//     });
+//     return;
+//   }
+app.post("/images/upload", upload.array("images"), async (req, res) => {
+  const files = req.files;
+  console.log(files); // An array of the selected files
+  if (!files || files.length === 0) {
+    res.status(400).send({
+      message: "Images are required!",
+    });
+    return;
+  }
+  const result = await uploadFile(files);
+  if (result) {
+    console.log(result);
+    files.map(async (file) => {
+      await unlinkFile(file.path);
+    });
+    // await unlinkFile(file.path);
+    res.status(200).send({
+      message: "Image uploaded successfully",
+      image: result,
+    });
+  } else {
+    console.log(result);
+    res.status(500).send({
+      message: "Failed to upload image!",
+    });
+  }
+});
+
+app.get("/images/:key", (req, res) => {
+  const key = req.params.key;
+  const readStream = getFileStream(key);
+  readStream.pipe(res);
+});
 
 app.listen(port, () => {
   console.log(`Server started running on port ${port}.`);
