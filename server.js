@@ -454,33 +454,38 @@ app.post("/listing/getListingById", (req, res) => {
 //     });
 //     return;
 //   }
-app.post("/images/upload", upload.array("images"), async (req, res) => {
-  const files = req.files;
-  console.log(files); // An array of the selected files
-  if (!files || files.length === 0) {
-    res.status(400).send({
-      message: "Images are required!",
-    });
-    return;
+app.post(
+  "/images/upload",
+  checkAuthentication,
+  upload.array("images"),
+  async (req, res) => {
+    const files = req.files;
+    console.log(files); // An array of the selected files
+    if (!files || files.length === 0) {
+      res.status(400).send({
+        message: "Images are required!",
+      });
+      return;
+    }
+    const result = await uploadFile(files);
+    if (result) {
+      console.log(result);
+      files.map(async (file) => {
+        await unlinkFile(file.path);
+      });
+      // await unlinkFile(file.path);
+      res.status(200).send({
+        message: "Image uploaded successfully",
+        image: result,
+      });
+    } else {
+      console.log(result);
+      res.status(500).send({
+        message: "Failed to upload image!",
+      });
+    }
   }
-  const result = await uploadFile(files);
-  if (result) {
-    console.log(result);
-    files.map(async (file) => {
-      await unlinkFile(file.path);
-    });
-    // await unlinkFile(file.path);
-    res.status(200).send({
-      message: "Image uploaded successfully",
-      image: result,
-    });
-  } else {
-    console.log(result);
-    res.status(500).send({
-      message: "Failed to upload image!",
-    });
-  }
-});
+);
 
 app.get("/images/:key", (req, res) => {
   const key = req.params.key;
