@@ -13,21 +13,7 @@ const s3 = new S3({
   secretAccessKey,
 });
 
-// upload file to S3
-// const uploadFile = (file) => {
-//   const fileStream = fs.createReadStream(file.path);
-
-//   const uploadParams = {
-//     Bucket: bucketName,
-//     Body: fileStream,
-//     Key: file.filename,
-//   };
-
-//   return s3.upload(uploadParams).promise();
-// };
-// exports.uploadFile = uploadFile;
-
-const uploadFile = (files) => {
+const uploadFiles = (files) => {
   return Promise.all(
     files.map((file) => {
       const fileStream = fs.createReadStream(file.path);

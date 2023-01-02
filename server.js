@@ -17,7 +17,8 @@ const util = require("util");
 //unlink the file after upload
 const unlinkFile = util.promisify(fs.unlink);
 
-const { uploadFile, getFileStream } = require("./s3");
+const { uploadFiles, getFileStream } = require("./s3");
+const { resizeUploadedImage } = require("./imageResize");
 
 const cors = require("cors");
 const app = express();
@@ -445,35 +446,33 @@ app.post("/listing/getListingById", (req, res) => {
 //   });
 // });
 
-// app.post("/image/upload", upload.single("image"), async (req, res) => {
-//   const file = req.file;
-//   console.log(file);
-//   if (!file) {
-//     res.status(400).send({
-//       message: "Image is required!",
-//     });
-//     return;
-//   }
 app.post(
   "/images/upload",
   checkAuthentication,
   upload.array("images"),
   async (req, res) => {
-    const files = req.files;
-    console.log(files); // An array of the selected files
+    const files = req.files; //get the files from the request
+    console.log({ files }); // An array of the selected files
     if (!files || files.length === 0) {
       res.status(400).send({
         message: "Images are required!",
       });
       return;
     }
-    const result = await uploadFile(files);
+    const resizedFiles = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const resizedImage = await resizeUploadedImage(file);
+      resizedFiles.push(resizedImage);
+    }
+    const result = await uploadFiles(resizedFiles);
     if (result) {
-      console.log(result);
       files.map(async (file) => {
         await unlinkFile(file.path);
       });
-      // await unlinkFile(file.path);
+      resizedFiles.map(async (file) => {
+        await unlinkFile(file.path);
+      });
       res.status(200).send({
         message: "Image uploaded successfully",
         image: result,
