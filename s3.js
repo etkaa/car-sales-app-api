@@ -28,7 +28,7 @@ const uploadFiles = (files) => {
     })
   );
 };
-exports.uploadFile = uploadFile;
+exports.uploadFiles = uploadFiles;
 
 //download file from S3
 const getFileStream = (fileKey) => {
