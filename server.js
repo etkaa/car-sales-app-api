@@ -451,7 +451,7 @@ app.post(
   checkAuthentication,
   upload.array("images"),
   async (req, res) => {
-    const files = req.files; //get the files from the request
+    var files = req.files; //get the files from the request
     console.log({ files }); // An array of the selected files
     if (!files || files.length === 0) {
       res.status(400).send({
@@ -459,7 +459,7 @@ app.post(
       });
       return;
     }
-    const resizedFiles = [];
+    var resizedFiles = [];
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       const resizedImage = await resizeUploadedImage(file);
@@ -469,11 +469,13 @@ app.post(
     const result = await uploadFiles(resizedFiles);
     if (result) {
       files.map(async (file) => {
-        await unlinkFile(file.path);
+        await unlinkFile(file.path); //delete the original image
       });
-      resizedFiles.map(async (file) => {
-        await unlinkFile(file.path);
+      files.map(async (file) => {
+        await unlinkFile(file.newPath); //delete the resized image
       });
+      files = null;
+      resizedFiles = null;
       res.status(200).send({
         message: "Image uploaded successfully",
         image: result,
