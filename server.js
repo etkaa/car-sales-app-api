@@ -509,10 +509,18 @@ app.post("/images/delete", checkAuthentication, async (req, res) => {
   }
 });
 
-app.get("/images/:key", (req, res) => {
+app.get("/images/:key", async (req, res) => {
   const key = req.params.key;
-  const readStream = getFileStream(key);
-  readStream.pipe(res);
+  const readStream = await getFileStream(key); ///PROBLEM IS HERE
+  //check for errors before piping the stream to the response
+  readStream
+    .on("error", (err) => {
+      res.status(500).send({
+        message: "Request failed, please try again later.",
+        // error: err,
+      });
+    })
+    .pipe(res);
 });
 
 app.listen(port, () => {

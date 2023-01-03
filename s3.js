@@ -13,6 +13,8 @@ const s3 = new S3({
   secretAccessKey,
 });
 
+///upload file to S3///
+
 const uploadFiles = (files) => {
   return Promise.all(
     files.map((file) => {
@@ -28,10 +30,11 @@ const uploadFiles = (files) => {
     })
   );
 };
-// exports.uploadFiles = uploadFiles;
+exports.uploadFiles = uploadFiles;
 
-//download file from S3
-const getFileStream = (fileKey) => {
+///download file from S3///
+
+const getFileStream = async (fileKey) => {
   const downloadParams = {
     Key: fileKey,
     Bucket: bucketName,
@@ -39,7 +42,9 @@ const getFileStream = (fileKey) => {
 
   return s3.getObject(downloadParams).createReadStream();
 };
-// exports.getFileStream = getFileStream;
+exports.getFileStream = getFileStream;
+
+///delete file from S3///
 
 const deleteObjects = async (imageKeysToDelete = []) => {
   // convert array of keys to objects of Key
@@ -51,22 +56,16 @@ const deleteObjects = async (imageKeysToDelete = []) => {
   };
 
   try {
-    // const data = await s3Client.send(new DeleteObjectsCommand(bucketParams));
     const data = s3.deleteObjects(bucketParams, function (err, data) {
-      if (err) console.log(err, err.stack);
-      // an error occurred
-      else console.log(data); // successful response
+      if (err) {
+        console.log(err, err.stack);
+      } else {
+        console.log(data);
+      }
     });
     return data; // For unit tests.
-    console.log("Success. Object deleted.");
   } catch (err) {
     console.log("Error", err);
   }
 };
-// exports.deleteObjects = deleteObjects;
-
-module.exports = {
-  uploadFiles,
-  getFileStream,
-  deleteObjects,
-};
+exports.deleteObjects = deleteObjects;
