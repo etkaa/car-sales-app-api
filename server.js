@@ -465,6 +465,7 @@ app.post(
       const resizedImage = await resizeUploadedImage(file);
       resizedFiles.push(resizedImage);
     }
+    console.log({ resizedFiles });
     const result = await uploadFiles(resizedFiles);
     if (result) {
       files.map(async (file) => {

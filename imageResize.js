@@ -7,8 +7,8 @@ async function resizeUploadedImage(file) {
       fit: sharp.fit.cover,
       withoutEnlargement: true,
     })
-    .toFile(`images/${file.filename}`);
-  file = { ...file, path: `images/${file.filename}` };
+    .toFile(`${file.filename}`);
+  file = { ...file, path: `${file.filename}` };
   return file;
 }
 exports.resizeUploadedImage = resizeUploadedImage;
