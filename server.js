@@ -17,7 +17,7 @@ const util = require("util");
 //unlink the file after upload
 const unlinkFile = util.promisify(fs.unlink);
 
-const { uploadFiles, getFileStream } = require("./s3");
+const { uploadFiles, getFileStream, deleteObjects } = require("./s3");
 const { resizeUploadedImage } = require("./imageResize");
 
 const cors = require("cors");
@@ -474,20 +474,40 @@ app.post(
       files.map(async (file) => {
         await unlinkFile(file.newPath); //delete the resized image
       });
-      files = null;
-      resizedFiles = null;
+      files = null; //memory cleanup
+      resizedFiles = null; //memory cleanup
       res.status(200).send({
-        message: "Image uploaded successfully",
+        message: "Image(s) uploaded successfully",
         image: result,
       });
     } else {
       console.log(result);
       res.status(500).send({
-        message: "Failed to upload image!",
+        message: "Failed to upload image(s)!",
       });
     }
   }
 );
+
+app.post("/images/delete", checkAuthentication, async (req, res) => {
+  const imageKeysToDelete = req.body.imageKeysToDelete;
+  if (!imageKeysToDelete || imageKeysToDelete.length === 0) {
+    res.status(400).send({
+      message: "Image keys are required!",
+    });
+    return;
+  }
+  const result = await deleteObjects(imageKeysToDelete);
+  if (result) {
+    res.status(200).send({
+      message: "Image(s) deleted successfully",
+    });
+  } else {
+    res.status(500).send({
+      message: "Failed to delete image(s)!",
+    });
+  }
+});
 
 app.get("/images/:key", (req, res) => {
   const key = req.params.key;

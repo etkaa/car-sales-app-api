@@ -28,7 +28,7 @@ const uploadFiles = (files) => {
     })
   );
 };
-exports.uploadFiles = uploadFiles;
+// exports.uploadFiles = uploadFiles;
 
 //download file from S3
 const getFileStream = (fileKey) => {
@@ -39,4 +39,34 @@ const getFileStream = (fileKey) => {
 
   return s3.getObject(downloadParams).createReadStream();
 };
-exports.getFileStream = getFileStream;
+// exports.getFileStream = getFileStream;
+
+const deleteObjects = async (imageKeysToDelete = []) => {
+  // convert array of keys to objects of Key
+  const objects = imageKeysToDelete.map((key) => ({ Key: key }));
+
+  const bucketParams = {
+    Bucket: bucketName,
+    Delete: { Objects: objects },
+  };
+
+  try {
+    // const data = await s3Client.send(new DeleteObjectsCommand(bucketParams));
+    const data = s3.deleteObjects(bucketParams, function (err, data) {
+      if (err) console.log(err, err.stack);
+      // an error occurred
+      else console.log(data); // successful response
+    });
+    return data; // For unit tests.
+    console.log("Success. Object deleted.");
+  } catch (err) {
+    console.log("Error", err);
+  }
+};
+// exports.deleteObjects = deleteObjects;
+
+module.exports = {
+  uploadFiles,
+  getFileStream,
+  deleteObjects,
+};
