@@ -15,15 +15,15 @@ const s3 = new S3({
 
 ///upload file to S3///
 
-const uploadFiles = (files) => {
+const uploadFiles = (resizedFiles, username) => {
   return Promise.all(
-    files.map((file) => {
+    resizedFiles.map((file) => {
       const fileStream = fs.createReadStream(file.newPath);
 
       const uploadParams = {
         Bucket: bucketName,
         Body: fileStream,
-        Key: file.filename,
+        Key: `${username + "-" + file.filename}`,
       };
 
       return s3.upload(uploadParams).promise();
@@ -58,9 +58,9 @@ const deleteObjects = async (imageKeysToDelete = []) => {
   try {
     const data = s3.deleteObjects(bucketParams, function (err, data) {
       if (err) {
-        console.log(err, err.stack);
+        // console.log(err, err.stack);
       } else {
-        console.log(data);
+        // console.log(data);
       }
     });
     return data; // For unit tests.

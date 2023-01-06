@@ -80,6 +80,7 @@ const userSchema = new mongoose.Schema({
   },
   password: String,
   favorites: [],
+  imageKeysToSubmit: [],
   auth_method: String,
 });
 
@@ -144,7 +145,7 @@ const checkAuthentication = (req, res, next) => {
   if (req.isAuthenticated()) {
     return next();
   } else {
-    res.status(401).send("Unauthorized");
+    res.status(401).send("Unauthorized request, please sign in.");
   }
 };
 
@@ -452,7 +453,8 @@ app.post(
   upload.array("images"),
   async (req, res) => {
     var files = req.files; //get the files from the request
-    console.log({ files }); // An array of the selected files
+    var username = req.user.username;
+    // console.log({ files }); // An array of the selected files
     if (!files || files.length === 0) {
       res.status(400).send({
         message: "Images are required!",
@@ -465,10 +467,11 @@ app.post(
       const resizedImage = await resizeUploadedImage(file);
       resizedFiles.push(resizedImage);
     }
-    console.log({ resizedFiles });
-    const result = await uploadFiles(resizedFiles);
+    // console.log({ resizedFiles });
+    const result = await uploadFiles(resizedFiles, username);
     if (result) {
       files.map(async (file) => {
+        console.log(file);
         await unlinkFile(file.path); //delete the original image
       });
       files.map(async (file) => {
@@ -509,7 +512,7 @@ app.post("/images/delete", checkAuthentication, async (req, res) => {
   }
 });
 
-app.get("/images/:key", async (req, res) => {
+app.get("/images/getImage/:key", async (req, res) => {
   const key = req.params.key;
   const readStream = await getFileStream(key); ///PROBLEM IS HERE
   //check for errors before piping the stream to the response
@@ -517,10 +520,89 @@ app.get("/images/:key", async (req, res) => {
     .on("error", (err) => {
       res.status(500).send({
         message: "Request failed, please try again later.",
-        // error: err,
+        error: err,
       });
-    })
+    }) //if no errors, pipe the stream to the response
     .pipe(res);
+});
+
+app.get("/images/getImageKeys", checkAuthentication, async (req, res) => {
+  User.findById(req.user._id, (err, user) => {
+    if (!err) {
+      res.status(200).send({
+        imageKeys: user.imageKeysToSubmit,
+      });
+    } else {
+      res.status(500).send({
+        message: "Failed to get image keys!",
+      });
+    }
+  });
+});
+
+app.post("/images/addImageKeys", checkAuthentication, async (req, res) => {
+  const imageKeys = req.body.imageKeys;
+  if (!imageKeys || imageKeys.length === 0) {
+    res.status(400).send({
+      message: "imageKeys are required!",
+    });
+    return;
+  }
+  User.findById(req.user._id, (err, user) => {
+    if (!err) {
+      imageKeys.forEach((key) => user.imageKeysToSubmit.push(key));
+      user.save((err, result) => {
+        if (!err) {
+          res.status(200).send({
+            result: result,
+            message: "Unsubmitted keys added successfully",
+          });
+        } else {
+          res.status(500).send({
+            message: "Failed to add unsubmitted keys!",
+          });
+        }
+      });
+    } else {
+      res.status(500).send({
+        message: "Failed to save unsubmitted keys!",
+      });
+    }
+  });
+});
+
+app.post("/images/removeImageKeys", checkAuthentication, async (req, res) => {
+  const imageKeys = req.body.imageKeys;
+  console.log(imageKeys);
+  if (!imageKeys || imageKeys.length === 0) {
+    res.status(400).send({
+      message: "imageKeys are required!",
+    });
+    return;
+  }
+  User.findById(req.user._id, (err, user) => {
+    if (!err) {
+      user.imageKeysToSubmit = user.imageKeysToSubmit.filter(
+        (key) => !imageKeys.includes(key)
+      );
+      user.save((err, result) => {
+        if (!err) {
+          res.status(200).send({
+            result: result,
+            message: "Unsubmitted keys deleted successfully",
+          });
+        } else {
+          res.status(500).send({
+            message: "Failed to delete unsubmitted keys!",
+          });
+        }
+      });
+    } else {
+      res.status(500).send({
+        message: "Failed to save unsubmitted keys!",
+      });
+    }
+  });
 });
 
 app.listen(port, () => {
