@@ -78,7 +78,9 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  nickname: String,
   password: String,
+  listings: [],
   favorites: [],
   imageKeysToSubmit: [],
   auth_method: String,
@@ -89,13 +91,13 @@ userSchema.plugin(passportLocalMongoose);
 const User = mongoose.model("User", userSchema);
 
 const listingSchema = new mongoose.Schema({
-  status: {
-    type: String,
-  },
+  isStock: String,
+  status: String,
   listing: {
     title: String,
     description: String,
     listingOwnerId: String,
+    listingOwnerNickname: String,
     createdAt: Date,
   },
   condition: String,
@@ -109,11 +111,9 @@ const listingSchema = new mongoose.Schema({
     horsepower: Number,
     torque: Number,
   },
+  transmission: String,
   miles: Number,
-  price: {
-    original: Number,
-    discounted: Number,
-  },
+  price: Number,
   extColor: String,
   intColor: String,
   location: {
@@ -121,10 +121,7 @@ const listingSchema = new mongoose.Schema({
     state: String,
     zip: String,
   },
-  pictures: {
-    cover: String,
-    otherPictures: [],
-  },
+  pictures: [],
 });
 
 const Listing = mongoose.model("Listing", listingSchema);
@@ -189,10 +186,12 @@ app.post("/auth/login", (req, res) => {
 });
 
 app.post("/auth/signup", (req, res) => {
+  const nickname = req.body.username.split("@")[0];
   User.register(
     {
       fullName: req.body.fullName,
       username: req.body.username,
+      nickname: nickname,
       auth_method: "local",
       favorites: [],
     },
@@ -321,40 +320,66 @@ app.post("/user/favorites/clear", checkAuthentication, (req, res) => {
   });
 });
 
-app.post("/listing/newListing", checkAuthentication, (req, res) => {
-  const listing = new Listing({
+app.post("/listing/create", checkAuthentication, (req, res) => {
+  const formData = req.body.formData;
+  const imageKeys = req.body.imageKeys;
+
+  const newListing = new Listing({
     status: "available",
-    "listing.title": req.body.listing.title,
-    "listing.description": req.body.listing.description,
-    "listing.listingOwnerId": req.user._id,
+    "listing.title": `${formData.year || ""} ${formData.make || ""} ${
+      formData.model || ""
+    }`,
+    "listing.description": formData.description,
+    condition: formData.condition,
+    year: formData.year,
+    make: formData.make,
+    model: formData.model,
+    trim: formData.trim,
+    miles: formData.mileage,
+    extColor: formData.extColor,
+    intColor: formData.intColor,
+    "engine.capacity": formData.engineCapacity,
+    "engine.cylinders": formData.cylinders,
+    "engine.horsepower": formData.horsepower,
+    "engine.torque": formData.torque,
+    transmission: formData.transmission,
+    price: formData.price,
+    "location.city": formData.city,
+    "location.state": formData.state,
+    "location.zip": formData.zip,
+    pictures: imageKeys,
     "listing.createdAt": new Date(),
-    condition: req.body.condition,
-    year: req.body.year,
-    make: req.body.make,
-    model: req.body.model,
-    trim: req.body.trim,
-    "engine.capacity": req.body.engine.capacity,
-    "engine.cylinders": req.body.engine.cylinders,
-    "engine.horsepower": req.body.engine.horsepower,
-    "engine.torque": req.body.engine.torque,
-    miles: req.body.miles,
-    "price.original": req.body.price.original,
-    extColor: req.body.extColor,
-    intColor: req.body.intColor,
-    "location.city": req.body.location.city,
-    "location.state": req.body.location.state,
-    "location.zip": req.body.location.zip,
-    pictures: {
-      cover: req.body.pictures,
-      otherPictures: req.body.otherPictures,
-    },
+    "listing.listingOwnerId": req.user._id,
+    "listing.listingOwnerNickname": req.user.nickname,
   });
 
-  listing.save((err) => {
+  newListing.save((err, listing) => {
     if (!err) {
-      res.status(200).send({
-        message: "Listing created successfully",
-        listing: listing,
+      //if no error, find the user, add the listing to their listings,
+      //set their imageKeysToSubmit to empty array, and send a success message
+      User.findById(req.user._id, (err, user) => {
+        if (!err) {
+          user.listings.push(listing._id);
+          user.imageKeysToSubmit = [];
+          user.save((err) => {
+            if (!err) {
+              res.status(200).send({
+                message: "Listing created successfully",
+                listingID: listing._id,
+              });
+            } else {
+              res.status(500).send({
+                message: "Failed to create listing!",
+                error: err,
+              });
+            }
+          });
+        } else {
+          res.status(500).send({
+            message: "Failed to create listing!",
+            error: err,
+          });
+        }
       });
     } else {
       res.status(500).send({
