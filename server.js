@@ -77,8 +77,13 @@ const userSchema = new mongoose.Schema({
   username: {
     type: String,
     required: true,
+    unique: true,
   },
-  nickname: String,
+  nickname: {
+    type: String,
+    required: true,
+    unique: true,
+  },
   password: String,
   listings: [],
   favorites: [],
@@ -478,7 +483,7 @@ app.post(
   upload.array("images"),
   async (req, res) => {
     var files = req.files; //get the files from the request
-    var username = req.user.username;
+    var nickname = req.user.nickname;
     // console.log({ files }); // An array of the selected files
     if (!files || files.length === 0) {
       res.status(400).send({
@@ -493,7 +498,7 @@ app.post(
       resizedFiles.push(resizedImage);
     }
     // console.log({ resizedFiles });
-    const result = await uploadFiles(resizedFiles, username);
+    const result = await uploadFiles(resizedFiles, nickname);
     if (result) {
       files.map(async (file) => {
         console.log(file);

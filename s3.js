@@ -15,7 +15,7 @@ const s3 = new S3({
 
 ///upload file to S3///
 
-const uploadFiles = (resizedFiles, username) => {
+const uploadFiles = (resizedFiles, nickname) => {
   return Promise.all(
     resizedFiles.map((file) => {
       const fileStream = fs.createReadStream(file.newPath);
@@ -23,7 +23,7 @@ const uploadFiles = (resizedFiles, username) => {
       const uploadParams = {
         Bucket: bucketName,
         Body: fileStream,
-        Key: `${username + "-" + file.filename}`,
+        Key: `${nickname + "-" + file.filename}`,
       };
 
       return s3.upload(uploadParams).promise();
