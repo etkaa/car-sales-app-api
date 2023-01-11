@@ -635,6 +635,23 @@ app.post("/images/removeImageKeys", checkAuthentication, async (req, res) => {
   });
 });
 
+app.get("/user/getUserListings", checkAuthentication, (req, res) => {
+  Listing.find(
+    { "listing.listingOwnerId": req.user._id },
+    (err, userListings) => {
+      if (!err) {
+        res.status(200).send({
+          userListings: userListings,
+        });
+      } else {
+        res.status(500).send({
+          message: "Failed to get listings!",
+        });
+      }
+    }
+  );
+});
+
 app.listen(port, () => {
   console.log(`Server started running on port ${port}.`);
 });
