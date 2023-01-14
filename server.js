@@ -127,6 +127,22 @@ const listingSchema = new mongoose.Schema({
     zip: String,
   },
   pictures: [],
+  statistics: {
+    viewed: {
+      type: Number,
+      default: 0,
+    },
+    favorited: {
+      type: Number,
+      default: 0,
+    },
+    contacted: {
+      type: Number,
+      default: 0,
+    },
+    sold: Boolean,
+    soldAt: Date,
+  },
 });
 
 const Listing = mongoose.model("Listing", listingSchema);
@@ -148,6 +164,7 @@ const checkAuthentication = (req, res, next) => {
     return next();
   } else {
     res.status(401).send("Unauthorized request, please sign in.");
+    return;
   }
 };
 
@@ -258,6 +275,20 @@ app.post("/user/favorites/add", checkAuthentication, (req, res) => {
       user.favorites.push(req.body.listingID);
       user.save((err) => {
         if (!err) {
+          Listing.updateOne(
+            { _id: req.body.listingID },
+            {
+              $inc: { "statistics.favorited": 1 },
+            },
+            (err, docs) => {
+              if (err) {
+                res.status(500).send({
+                  message: "Failed to increment favorites count!",
+                  error: err,
+                });
+              }
+            }
+          );
           res.status(200).send();
         } else {
           res.status(500).send({
@@ -283,6 +314,20 @@ app.post("/user/favorites/remove", checkAuthentication, (req, res) => {
       });
       user.save((err) => {
         if (!err) {
+          Listing.updateOne(
+            { _id: req.body.listingID },
+            {
+              $inc: { "statistics.favorited": -1 },
+            },
+            (err, docs) => {
+              if (err) {
+                res.status(500).send({
+                  message: "Failed to increment favorites count!",
+                  error: err,
+                });
+              }
+            }
+          );
           res.status(200).send();
         } else {
           res.status(500).send({
@@ -303,6 +348,21 @@ app.post("/user/favorites/remove", checkAuthentication, (req, res) => {
 app.post("/user/favorites/clear", checkAuthentication, (req, res) => {
   User.findById(req.user._id, (err, user) => {
     if (!err) {
+      //get all the listings that were favorited by the user and decrement the favorited count
+      Listing.updateMany(
+        { _id: { $in: user.favorites } },
+        {
+          $inc: { "statistics.favorited": -1 },
+        },
+        (err, docs) => {
+          if (err) {
+            res.status(500).send({
+              message: "Failed to decrement favorites count!",
+              error: err,
+            });
+          }
+        }
+      );
       user.favorites = [];
       user.save((err) => {
         if (!err) {
@@ -356,6 +416,11 @@ app.post("/listing/create", checkAuthentication, (req, res) => {
     "listing.createdAt": new Date(),
     "listing.listingOwnerId": req.user._id,
     "listing.listingOwnerNickname": req.user.nickname,
+    "statistics.viewed": 0,
+    "statistics.favorited": 0,
+    "statistics.contacted": 0,
+    "statistics.sold": false,
+    "statistics.soldAt": null,
   });
 
   newListing.save((err, listing) => {
@@ -448,20 +513,34 @@ app.post("/listing/getListingById", (req, res) => {
     return;
   }
 
+  Listing.updateOne(
+    { _id: req.body.listingID },
+    { $inc: { "statistics.viewed": 1 } },
+    (err) => {
+      if (err) {
+        res.status(500).send({
+          message: "Failed to update listing!",
+          error: err,
+        });
+      }
+    }
+  );
+
   Listing.findById(req.body.listingID, (err, listing) => {
     if (!err) {
-      res.status(200).send({
-        listing: listing,
-      });
-    } else {
-      res.status(500).send({
-        message: "Failed to get listing!",
-        error: err,
-      });
+      if (!err) {
+        res.status(200).send({
+          listing: listing,
+        });
+      } else {
+        res.status(500).send({
+          message: "Failed to get listing!",
+          error: err,
+        });
+      }
     }
   });
 });
-
 // app.post("/listing/insertListing", (req, res) => {
 //   Listing.insertMany(req.body.listings, (err, listings) => {
 //     if (!err) {
