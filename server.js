@@ -731,6 +731,32 @@ app.get("/user/getUserListings", checkAuthentication, (req, res) => {
   );
 });
 
+app.post("/listing/delete", checkAuthentication, (req, res) => {
+  const userId = req.user._id;
+  const listingId = req.body.listingId;
+
+  Listing.findById(listingId, (err, listing) => {
+    if (listing.listing.listingOwnerId != userId) {
+      res.status(401).send({
+        message: "Unauthorized to delete this listing!",
+      });
+      return;
+    }
+  });
+
+  Listing.findByIdAndDelete(listingId, (err, listing) => {
+    if (!err) {
+      res.status(200).send({
+        message: "Listing deleted successfully",
+      });
+    } else {
+      res.status(500).send({
+        message: "Failed to delete listing!",
+      });
+    }
+  });
+});
+
 app.listen(port, () => {
   console.log(`Server started running on port ${port}.`);
 });
