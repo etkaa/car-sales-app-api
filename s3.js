@@ -55,17 +55,16 @@ const deleteObjects = async (imageKeysToDelete = []) => {
     Delete: { Objects: objects },
   };
 
-  try {
-    const data = s3.deleteObjects(bucketParams, function (err, data) {
+  return new Promise((resolve, reject) => {
+    s3.deleteObjects(bucketParams, function (err, data) {
       if (err) {
-        // console.log(err, err.stack);
+        console.log("Error deleting objects from S3", err);
+        reject(err);
       } else {
-        // console.log(data);
+        console.log("Successfully deleted objects from S3");
+        resolve(data);
       }
     });
-    return data; // For unit tests.
-  } catch (err) {
-    console.log("Error", err);
-  }
+  });
 };
 exports.deleteObjects = deleteObjects;

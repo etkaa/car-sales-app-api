@@ -735,25 +735,35 @@ app.post("/listing/delete", checkAuthentication, (req, res) => {
   const userId = req.user._id;
   const listingId = req.body.listingId;
 
-  Listing.findById(listingId, (err, listing) => {
+  Listing.findById(listingId, async (err, listing) => {
     if (listing.listing.listingOwnerId != userId) {
       res.status(401).send({
         message: "Unauthorized to delete this listing!",
       });
       return;
     }
-  });
+    const imageKeys = listing.pictures;
 
-  Listing.findByIdAndDelete(listingId, (err, listing) => {
-    if (!err) {
-      res.status(200).send({
-        message: "Listing deleted successfully",
+    deleteObjects(imageKeys)
+      .then((data) => {
+        Listing.findByIdAndDelete(listingId, (err) => {
+          if (!err) {
+            res.status(200).send({
+              message: "Listing deleted successfully",
+            });
+          } else {
+            res.status(500).send({
+              message: "Failed to delete listing!",
+            });
+          }
+        });
+      })
+      .catch((error) => {
+        console.log(error);
+        res.status(500).send({
+          message: "Failed to delete listing!",
+        });
       });
-    } else {
-      res.status(500).send({
-        message: "Failed to delete listing!",
-      });
-    }
   });
 });
 
