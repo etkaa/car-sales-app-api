@@ -84,6 +84,9 @@ const userSchema = new mongoose.Schema({
     required: true,
     unique: true,
   },
+  about: {
+    type: String,
+  },
   password: String,
   listings: [],
   favorites: [],
@@ -765,6 +768,47 @@ app.post("/listing/delete", checkAuthentication, (req, res) => {
         });
       });
   });
+});
+
+app.put("/user/updateProfileFields", checkAuthentication, async (req, res) => {
+  const userId = req.user._id;
+  const { fullName, nickname, about } = req.body.formData;
+
+  try {
+    // Get the current user profile from the database
+    const user = await User.findById(userId);
+
+    // Update only the fields that have changed
+    if (fullName && fullName !== user.fullName) {
+      user.fullName = fullName;
+    }
+    if (nickname && nickname !== user.nickname) {
+      // Check if the new nickname is unique before updating it
+      const existingUser = await User.findOne({ nickname });
+      if (existingUser && existingUser._id.toString() !== userId) {
+        return res.status(400).send({
+          message: "Nickname is not unique!",
+          errCode: "nicknameNotUnique",
+        });
+      }
+      user.nickname = nickname;
+    }
+    if (about && about !== user.about) {
+      user.about = about;
+    }
+
+    // Save the updated user profile to the database
+    const updatedUser = await user.save();
+
+    res.status(200).send({
+      message: "Profile updated successfully",
+      updatedUser,
+    });
+  } catch (err) {
+    res.status(500).send({
+      message: "Failed to update profile",
+    });
+  }
 });
 
 app.listen(port, () => {
