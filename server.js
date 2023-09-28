@@ -87,6 +87,9 @@ const userSchema = new mongoose.Schema({
   about: {
     type: String,
   },
+  profile: {
+    profilePictureKey: String,
+  },
   password: String,
   listings: [],
   favorites: [],
@@ -493,7 +496,7 @@ app.get("/listing/getFavoritedListings", checkAuthentication, (req, res) => {
 
 app.get("/listing/getFeaturedListings", (req, res) => {
   //get 10 random listings
-  Listing.aggregate([{ $sample: { size: 10 } }], (err, listings) => {
+  Listing.aggregate([{ $sample: { size: 20 } }], (err, listings) => {
     if (!err) {
       res.status(200).send({
         listings: listings,
@@ -807,6 +810,52 @@ app.put("/user/updateProfileFields", checkAuthentication, async (req, res) => {
   } catch (err) {
     res.status(500).send({
       message: "Failed to update profile",
+    });
+  }
+});
+
+app.put("/user/updateProfileImage", checkAuthentication, async (req, res) => {
+  const userId = req.user._id;
+  // we will receive the s3 key of the new profile picture, just save it into the database
+  const newProfilePictureKey = req.body.imageKey;
+
+  try {
+    // Get the current user profile from the database
+    User.findById(userId, (err, user) => {
+      if (!err) {
+        //delete the existing profile picture from s3
+        if (user?.profile?.profilePictureKey) {
+          deleteObjects([user.profile.profilePictureKey]);
+        }
+        //update the profile picture key in the database
+        // if field doesn't exist, create it
+        if (!user.profile) {
+          user.profile = {};
+        }
+        // set the new profile picture key
+        user.profile.profilePictureKey = newProfilePictureKey;
+        // save the user changes
+        user.save((err, result) => {
+          if (!err) {
+            res.status(200).send({
+              message: "Profile picture updated successfully",
+              result: result,
+            });
+          } else {
+            res.status(500).send({
+              message: "Error when saving user!",
+            });
+          }
+        });
+      } else {
+        res.status(500).send({
+          message: "Cant find the user!",
+        });
+      }
+    });
+  } catch (err) {
+    res.status(500).send({
+      message: "Failed to update profile picture!",
     });
   }
 });
